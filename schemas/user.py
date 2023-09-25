@@ -6,3 +6,5 @@ class User(BaseModel):
     name: str
     email: str
     password: str
+    secret_string: str
+    todoist_access_token: Optional[str] = ""
