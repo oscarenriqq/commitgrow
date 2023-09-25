@@ -12,7 +12,7 @@ def redirect(code: str, state: str):
     
     response = requests.post(
         "https://todoist.com/oauth/access_token", 
-        params= {
+        data= {
             "client_id": os.getenv('TODOIST_CLIENT_ID'),
             "client_secret": os.getenv('TODOIST_CLIENT_SECRET'),
             "code": code
