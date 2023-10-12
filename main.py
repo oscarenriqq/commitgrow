@@ -1,7 +1,3 @@
-import threading
-import time
-import schedule
-
 from fastapi import FastAPI
 from dotenv import load_dotenv
 from routes.contract import contract_route
@@ -9,8 +5,6 @@ from routes.todoist_tasks import task_route
 
 from config.db import database
  
-from services.verifier import verify_contracts
-
 app = FastAPI()
 
 load_dotenv() 
