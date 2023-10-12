@@ -1,12 +1,31 @@
+import threading
+import time
+import schedule
+
 from fastapi import FastAPI
-from routes.user import user
-from routes.auth import auth
+from dotenv import load_dotenv
+from routes.contract import contract_route
+from routes.todoist_tasks import task_route
+
+from config.db import database
+ 
+from services.verifier import verify_contracts
 
 app = FastAPI()
 
-app.include_router(user, prefix="/api")
-app.include_router(auth, prefix="/api")
+load_dotenv() 
+
+app.include_router(contract_route)
+app.include_router(task_route)
+
+@app.on_event("startup")
+async def startup():
+    await database.connect()
+
+@app.on_event("shutdown")
+async def shutdown():
+    await database.disconnect()
 
 @app.get("/")
 async def root():
-    return {"message": "Hello World"}
+    return "Bienvenido a Commit Grow"
