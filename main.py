@@ -1,3 +1,4 @@
+from datetime import datetime
 from fastapi import FastAPI
 from dotenv import load_dotenv
 from routes.contract import contract_route
@@ -22,4 +23,4 @@ async def shutdown():
 
 @app.get("/")
 async def root():
-    return "Bienvenido a Commit Grow"
+    return f"Bienvenido a CommitGrow - {datetime.now()} - UTC {datetime.utcnow()}"
