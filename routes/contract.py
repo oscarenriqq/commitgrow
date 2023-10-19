@@ -11,8 +11,6 @@ from models.penalty import penalties
 from models.streak import streaks
 from schemas.contract import Contract
 
-from services.serializer import serialize_date
-
 contract_route = APIRouter()
 
 @contract_route.get("/contracts", response_model=list[Contract])
