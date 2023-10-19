@@ -24,11 +24,11 @@ async def authorize(secret_string: str, current_user: UserAuth = Depends(get_cur
     users_todoist_credentials_data = { "user_id": current_user.id, "secret_string": secret_string, "access_token": "" }
     
     if result is None:
-        query = users_todoist_credentials.insert().values(users_todoist_credentials_data)
-        await database.execute(query)
+        query_insert = users_todoist_credentials.insert().values(users_todoist_credentials_data)
+        await database.execute(query_insert)
     else:
-        query = users_todoist_credentials.update().where(users_todoist_credentials.c.secret_string == secret_string).values(users_todoist_credentials_data)
-        await database.execute(query)
+        query_update = users_todoist_credentials.update().where(users_todoist_credentials.c.secret_string == secret_string).values(users_todoist_credentials_data)
+        await database.execute(query_update)
             
     return JSONResponse(content={ "url": "{}{}".format(os.getenv('TODOIST_AUTH_URL'),secret_string) }, status_code=status.HTTP_200_OK)
 
@@ -45,7 +45,10 @@ async def redirect(code: str, state: str):
     )
     
     todoist_auth_data = response.json()
-    
+
+    if "error" in todoist_auth_data:
+        return JSONResponse(content={ "message": "Todoist Authentication Failed." }, status_code=status.HTTP_400_BAD_REQUEST)
+        
     query_user = users_todoist_credentials.select().where(users_todoist_credentials.c.secret_string == state)
     user = await database.fetch_one(query_user)
     
