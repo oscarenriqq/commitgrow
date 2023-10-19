@@ -1,32 +1,77 @@
-from fastapi import APIRouter
-from dotenv import load_dotenv
-from starlette.responses import JSONResponse
-from starlette.status import HTTP_200_OK
 import requests
 import os
+from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi.security import OAuth2PasswordRequestForm
+from dotenv import load_dotenv
+from starlette.responses import JSONResponse
 
-from config.db import get_conn
+from config.db import database
 from models.user import users
+from schemas.user_auth import UserAuth
+from uuid import uuid4
 
-auth = APIRouter()
+from utils.utils import (
+    get_hashed_password,
+    create_access_token,
+    create_refresh_token,
+    verify_password
+)
+
+auth_router = APIRouter()
 
 load_dotenv()
 
-@auth.get("/redirect")
-def redirect(code: str, state: str):
+@auth_router.post("/signup", summary="Create a new user")
+async def create_user(data: UserAuth):
+    query = users.select().where(users.c.email == data.email)
+    user = await database.fetch_one(query)
     
-    response = requests.post(
-        url="https://todoist.com/oauth/access_token", 
-        data= {
-            "client_id": os.getenv('TODOIST_CLIENT_ID'),
-            "client_secret": os.getenv('TODOIST_CLIENT_SECRET'),
-            "code": code
-        }
-    )
+    #Si el usuario ya existe, lanzamos un error
+    if user is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered"
+        )
+        
+    user = {
+        "id": str(uuid4()),
+        "name": data.name,
+        "email": data.email,
+        "password": get_hashed_password(data.password),
+    }
     
-    data = response.json()
-    conn = get_conn()
-    conn.execute(users.update().where(users.c.secret_string == state).values(todoist_access_token=data['access_token']))
-    conn.commit()
-
-    return JSONResponse(content={ "message": "success" }, status_code=HTTP_200_OK)
+    query_insert = users.insert().values(user)
+    
+    try:
+        await database.execute(query_insert)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+    
+    return user
+    
+@auth_router.post("/login", summary="Login user")
+async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    query_search_user = users.select().where(users.c.email == form_data.username)
+    user = await database.fetch_one(query_search_user)
+    
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Incorrect email or password"
+        )
+        
+    hashed_pass = user["password"]
+    
+    if not verify_password(form_data.password, hashed_pass):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Incorrect email or password"
+        )
+        
+    return {
+        "access_token": create_access_token(user["email"]),
+        "refresh_token": create_refresh_token(user["email"]),
+    }

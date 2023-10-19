@@ -13,7 +13,7 @@ from schemas.contract import Contract
 
 from services.serializer import serialize_date
 
-contract_route = APIRouter(prefix="/api")
+contract_route = APIRouter()
 
 @contract_route.get("/contracts", response_model=list[Contract])
 async def get_contracts():
