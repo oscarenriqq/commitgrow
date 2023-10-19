@@ -43,7 +43,7 @@ async def redirect(code: str, state: str):
     todoist_auth_data = response.json()
     
     query_user = users_todoist_credentials.select().where(users_todoist_credentials.c.secret_string == state)
-    user = await database.execute(query_user).fetchone()
+    user = await database.fetch_one(query_user)
     
     user_todoist_data = {
         "access_token": todoist_auth_data['access_token'],
