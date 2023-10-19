@@ -18,7 +18,7 @@ load_dotenv()
 @todoist_router.post("/authorize")
 async def authorize(secret_string: str, current_user: UserAuth = Depends(get_current_user)):
     
-    query = users_todoist_credentials.select().where(users_todoist_credentials.c.secret_string == secret_string)
+    query = users_todoist_credentials.select().where(users_todoist_credentials.c.user_id == current_user.id)
     result = await database.fetch_one(query)
     
     users_todoist_credentials_data = { "user_id": current_user.id, "secret_string": secret_string, "access_token": "" }
@@ -45,16 +45,11 @@ async def redirect(code: str, state: str):
     )
     
     todoist_auth_data = response.json()
-    print(todoist_auth_data['access_token'])
     
     query_user = users_todoist_credentials.select().where(users_todoist_credentials.c.secret_string == state)
     user = await database.fetch_one(query_user)
     
-    user_todoist_data = {
-        "access_token": todoist_auth_data['access_token'],
-    }
-    
-    query = users_todoist_credentials.update().where(users_todoist_credentials.c.user_id == user.id).values(user_todoist_data)
+    query = users_todoist_credentials.update().where(users_todoist_credentials.c.user_id == user.id).values(access_token=str(todoist_auth_data['access_token']))
     await database.execute(query)
 
     return JSONResponse(content={ "message": "Todoist Authentication Complete." }, status_code=status.HTTP_200_OK)
