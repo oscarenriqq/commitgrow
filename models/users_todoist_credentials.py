@@ -8,8 +8,8 @@ users_todoist_credentials = Table(
     get_metadata(),
     Column("id", Integer, primary_key=True),
     Column("user_id", String(255), nullable=False),
-    Column("access_token", String(255), nullable=False),
-    Column("secret_string", String(255), nullable=False),
+    Column("access_token", String(255), nullable=False, default=""),
+    Column("secret_string", String(255), nullable=False, default=""),
     Column("created_at", DateTime, nullable=False, default=func.now()),
     Column("updated_at", DateTime, nullable=False, default=func.now())
 )
