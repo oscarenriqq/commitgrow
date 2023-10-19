@@ -6,8 +6,7 @@ from config.db import get_metadata, get_engine
 users_todoist_credentials = Table(
     "users_todoist_credentials",
     get_metadata(),
-    Column("id", Integer, primary_key=True),
-    Column("user_id", String(255), nullable=False),
+    Column("user_id", String(255), nullable=False, primary_key=True),
     Column("access_token", String(255), nullable=False, default=""),
     Column("secret_string", String(255), nullable=False, default=""),
     Column("created_at", DateTime, nullable=False, default=func.now()),
