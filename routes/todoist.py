@@ -19,7 +19,7 @@ load_dotenv()
 async def authorize(secret_string: str, current_user: UserAuth = Depends(get_current_user)):
     
     query = users_todoist_credentials.select().where(users_todoist_credentials.c.secret_string == secret_string)
-    result = await database.execute(query)
+    result = await database.fetch_one(query)
     
     users_todoist_credentials_data = { "user_id": current_user.id, "secret_string": secret_string, "access_token": "" }
     
@@ -45,7 +45,7 @@ async def redirect(code: str, state: str):
     )
     
     todoist_auth_data = response.json()
-    print(todoist_auth_data)
+    print(todoist_auth_data['access_token'])
     
     query_user = users_todoist_credentials.select().where(users_todoist_credentials.c.secret_string == state)
     user = await database.fetch_one(query_user)
