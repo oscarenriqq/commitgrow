@@ -21,11 +21,15 @@ async def authorize(secret_string: str, current_user: UserAuth = Depends(get_cur
     query = users_todoist_credentials.select().where(users_todoist_credentials.c.secret_string == secret_string)
     result = await database.execute(query)
     
+    users_todoist_credentials_data = { "user_id": current_user.id, "secret_string": secret_string, "access_token": "" }
+    
     if result is None:
-        users_todoist_credentials_data = { "user_id": current_user.id, "secret_string": secret_string, "access_token": "" }
+        query = users_todoist_credentials.insert().values(users_todoist_credentials_data)
+        await database.execute(query)
+    else:
+        query = users_todoist_credentials.update().where(users_todoist_credentials.c.secret_string == secret_string).values(users_todoist_credentials_data)
+        await database.execute(query)
             
-        query_insert = users_todoist_credentials.insert().values(users_todoist_credentials_data)
-        await database.execute(query_insert)
     return JSONResponse(content={ "url": "{}{}".format(os.getenv('TODOIST_AUTH_URL'),secret_string) }, status_code=status.HTTP_200_OK)
 
 @todoist_router.get("/redirect")
