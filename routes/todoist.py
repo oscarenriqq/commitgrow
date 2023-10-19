@@ -22,7 +22,7 @@ async def authorize(secret_string: str, current_user: UserAuth = Depends(get_cur
     result = await database.execute(query)
     
     if result is None:
-        users_todoist_credentials_data = { "user_id": current_user.id, "secret_string": secret_string }
+        users_todoist_credentials_data = { "user_id": current_user.id, "secret_string": secret_string, "access_token": "" }
             
         query_insert = users_todoist_credentials.insert().values(users_todoist_credentials_data)
         await database.execute(query_insert)
