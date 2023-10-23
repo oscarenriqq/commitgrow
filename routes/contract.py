@@ -1,104 +1,185 @@
-import os
-import json
-from fastapi import APIRouter
-from fastapi.encoders import jsonable_encoder
-from fastapi.responses import JSONResponse, Response
-from fastapi import Request
+from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi.responses import JSONResponse
 
 from config.db import database
 from models.contract import contracts
 from models.penalty import penalties
 from models.streak import streaks
+from models.user import users
 from schemas.contract import Contract
+from schemas.user_auth import UserAuth
+from app.deps import get_current_user
 
-contract_route = APIRouter()
+from utils.utils import validate_contracts
 
-@contract_route.get("/contracts", response_model=list[Contract])
-async def get_contracts():
-    query = contracts.select()
-    return await database.fetch_all(query)
+PROTECTED = [Depends(get_current_user)]
 
-@contract_route.get("/active-contracts", response_model=list[Contract])
-async def get_contracts():
-    query = contracts.select().where(contracts.c.status == 1)
-    return await database.fetch_all(query)
+contract_router = APIRouter(
+    tags=["Contracts"],
+    dependencies=PROTECTED,
+    prefix="/api"
+)
 
-@contract_route.post("/contract")
-async def create_contract(contract: Contract):
-    query = contracts.insert().values(
-        task_id=contract.task_id,
-        responsible_name=contract.responsible_name,
-        responsible_email=contract.responsible_email,
-        habit=contract.habit,
-        description=contract.description,
-        penalty=contract.penalty,
-        start=contract.start.strftime("%Y-%m-%d"),
-        end=contract.end.strftime("%Y-%m-%d"),
-        status=0,
-        supervisor_name=contract.supervisor_name,
-        supervisor_email=contract.supervisor_email
+@contract_router.get("/contracts", response_model=list[Contract])
+async def get_contracts(current_user: UserAuth = Depends(get_current_user)):
+    query = contracts.select().where(contracts.c.user_id == current_user.id)
+    result = await database.fetch_all(query)
+    return JSONResponse(status_code=status.HTTP_200_OK, content=result)
+
+@contract_router.get("/active-contracts", response_model=list[Contract])
+async def get_contracts(current_user: UserAuth = Depends(get_current_user)):
+    query = contracts.select().where(
+        (contracts.c.status == 1) & 
+        (contracts.c.user_id == current_user.id)
     )
-    
-    last_record_id = await database.execute(query)
-    return JSONResponse(status_code=201, content={"message": "Contract created successfully", "id": last_record_id})
+    try:
+        result = await database.fetch_all(query)
+        return JSONResponse(status_code=status.HTTP_200_OK, content=result)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"message": "Internal Server Error", "detail": str(e)}
+        )    
 
-@contract_route.put("/contract/{id}")
-async def update_contract(id: str, contract_update: Contract):
-    query_verify = contracts.select().where(contracts.c.id == id)
-    if await database.fetch_one(query_verify) is None:
-        return JSONResponse(status_code=404, content={"message": "Contract not found"})
+@contract_router.post("/contract")
+async def create_contract(contract: Contract, current_user: UserAuth = Depends(get_current_user)):
     
-    query_update = (contracts.update().where(contracts.c.id == id).values(contract_update.dict()))
-    await database.execute(query_update)
+    user_query = users.select().where(users.c.id == current_user.id)
+    user = await database.fetch_one(user_query)
     
-    return JSONResponse(status_code=200, content={"message": "Contract updated successfully"})
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"message": "User not found"}
+        )
+    try:
+        query = contracts.insert().values(
+            user_id=current_user.id,
+            task_id=contract.task_id,
+            responsible_name=user.name,
+            responsible_email=user.email,
+            habit=contract.habit,
+            description=contract.description,
+            penalty=contract.penalty,
+            start=contract.start.strftime("%Y-%m-%d"),
+            end=contract.end.strftime("%Y-%m-%d"),
+            status=0,
+            supervisor_name=contract.supervisor_name,
+            supervisor_email=contract.supervisor_email
+        )
+        
+        last_record_id = await database.execute(query)
+        return JSONResponse(status_code=status.HTTP_201_CREATED, content={"message": "Contract created successfully", "id": last_record_id})
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"message": "Internal Server Error", "detail": str(e)}
+        )
 
-@contract_route.put("/contract/{id}/activate")
-async def activate_contract(id: str):
-    query_verify = contracts.select().where(contracts.c.id == id)
+@contract_router.put("/contract/{id}")
+async def update_contract(id: str, contract_update: Contract, current_user: UserAuth = Depends(get_current_user)):
     
-    if await database.fetch_one(query_verify) is None:
-        return JSONResponse(status_code=404, content={"message": "Contract not found"})
+    if not await validate_contracts(id, current_user.id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"message": "Contract not found"})
+    
+    query_update = (contracts.update().where(
+        (contracts.c.id == id) & 
+        (contracts.c.user_id == current_user.id)).values(contract_update))
+    
+    try:    
+        result = await database.execute(query_update)
+        return JSONResponse(status_code=status.HTTP_200_OK, content={"message": "Contract updated successfully"})
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"message": "Internal Server Error", "detail": str(e)}
+        )
+
+@contract_router.put("/contract/{id}/activate")
+async def activate_contract(id: str, current_user: UserAuth = Depends(get_current_user)):
+
+    if not await validate_contracts(id, current_user.id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"message": "Contract not found"})
     
     query_update = contracts.update().where(contracts.c.id == id).values(status=1)
-    await database.execute(query_update)
     
-    return JSONResponse(status_code=200, content={"message": "Contract activated successfully"})
+    try:
+        await database.execute(query_update)
+        return JSONResponse(status_code=status.HTTP_200_OK, content={"message": "Contract activated successfully"})
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"message": "Internal Server Error", "detail": str(e)}
+        )    
 
-@contract_route.put("/contract/{id}/deactivate")
-async def activate_contract(id: str):
-    query_verify = contracts.select().where(contracts.c.id == id)
+@contract_router.put("/contract/{id}/deactivate")
+async def deactivate_contract(id: str, current_user: UserAuth = Depends(get_current_user)):
     
-    if await database.fetch_one(query_verify) is None:
-        return JSONResponse(status_code=404, content={"message": "Contract not found"})
+    if not await validate_contracts(id, current_user.id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"message": "Contract not found"})
     
-    query_update = contracts.update().where(contracts.c.id == id).values(status=0)
-    await database.execute(query_update)
+    query_update = contracts.update().where(
+        (contracts.c.id == id) & 
+        (contracts.c.user_id == current_user.id)).values(status=0)
     
-    return JSONResponse(status_code=200, content={"message": "Contract activated successfully"})
+    try:
+        await database.execute(query_update)
+        return JSONResponse(status_code=status.HTTP_200_OK, content={"message": "Contract activated successfully"})
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"message": "Internal Server Error", "detail": str(e)}
+        )
 
-@contract_route.post("/penalty")
-async def create_penalty(contract: Contract):
-    query_verify = contracts.select().where(contracts.c.id == contract.id)
-    contract = await database.fetch_one(query_verify)
+@contract_router.delete("/contract/{id}")
+async def delete_contract(id: str, current_user: UserAuth = Depends(get_current_user)):
     
-    if contract is None:
-        return JSONResponse(status_code=404, content={"message": "Contract not found"})
+    if not await validate_contracts(id, current_user.id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"message": "Contract not found"})
     
-    query_insert = penalties.insert().values(contract_id=contract.id, description=contract.penalty)
-    await database.execute(query_insert)
+    query_delete = contracts.delete().where(
+        (contracts.c.id == id) & 
+        (contracts.c.user_id == current_user.id))
     
-    return JSONResponse(status_code=200, content={"message": "Contract penalty successfully"})
+    try:
+        await database.execute(query_delete)
+        return JSONResponse(status_code=status.HTTP_200_OK, content={"message": "Contract deleted successfully"})
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"message": "Internal Server Error", "detail": str(e)}
+        )
 
-@contract_route.post("/streak")
-async def create_streak(contract: Contract):
-    query_verify = contracts.select().where(contracts.c.id == contract.id)
-    contract = await database.fetch_one(query_verify)
+@contract_router.post("/penalty")
+async def create_penalty(contract: Contract, current_user: UserAuth = Depends(get_current_user)):
     
-    if contract is None:
-        return JSONResponse(status_code=404, content={"message": "Contract not found"})
+    if not await validate_contracts(id, current_user.id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"message": "Contract not found"})
     
-    query_insert = streaks.insert().values(contract_id=contract.id)
-    await database.execute(query_insert)
+    query_insert = penalties.insert().values(contract_id=contract.id, user_id=current_user.id, description=contract.penalty)
     
-    return JSONResponse(status_code=200, content={"message": "Contract streak successfully"})
+    try:
+        await database.execute(query_insert)
+        return JSONResponse(status_code=status.HTTP_201_CREATED, content={"message": "Contract penalty successfully"})
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"message": "Internal Server Error", "detail": str(e)}
+        )
+
+@contract_router.post("/streak")
+async def create_streak(contract: Contract, current_user: UserAuth = Depends(get_current_user)):
+    
+    if not await validate_contracts(id, current_user.id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"message": "Contract not found"})
+    
+    query_insert = streaks.insert().values(contract_id=contract.id, user_id=current_user.id)
+    
+    try:
+        await database.execute(query_insert)
+        return JSONResponse(status_code=status.HTTP_201_CREATED, content={"message": "Contract streak successfully"})
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"message": "Internal Server Error", "detail": str(e)}
+        )

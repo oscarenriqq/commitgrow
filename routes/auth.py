@@ -8,20 +8,23 @@ from starlette.responses import JSONResponse
 from config.db import database
 from models.user import users
 from schemas.user_auth import UserAuth
-from uuid import uuid4
 
 from utils.utils import (
     get_hashed_password,
     create_access_token,
     create_refresh_token,
-    verify_password
+    verify_password,
+    user_id_is_used
 )
 
-auth_router = APIRouter()
+auth_router = APIRouter(
+    prefix="/api/auth",
+    tags=["Auth"]
+)
 
 load_dotenv()
 
-@auth_router.post("/signup", summary="Create a new user")
+@auth_router.post("/signup", summary="Create user account")
 async def create_user(data: UserAuth):
     query = users.select().where(users.c.email == data.email)
     user = await database.fetch_one(query)
@@ -33,8 +36,11 @@ async def create_user(data: UserAuth):
             detail="Email already registered"
         )
         
+    #Verificamos que el ID generado no exista en la base de datos
+    new_user_id = await user_id_is_used()
+        
     user = {
-        "id": str(uuid4()),
+        "id": new_user_id,
         "name": data.name,
         "email": data.email,
         "password": get_hashed_password(data.password),

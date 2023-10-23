@@ -1,6 +1,6 @@
 import requests
 import os
-from fastapi import APIRouter, status, Depends
+from fastapi import APIRouter, status, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 
@@ -11,7 +11,7 @@ from schemas.user_auth import UserAuth
 from config.db import database
 from app.deps import get_current_user
 
-todoist_router = APIRouter()
+todoist_router = APIRouter(tags=["Todoist Integration"])
 
 load_dotenv()
 
@@ -46,7 +46,7 @@ async def redirect(code: str, state: str):
     todoist_auth_data = response.json()
 
     if "error" in todoist_auth_data:
-        return JSONResponse(content={ "message": "Todoist Authentication Failed." }, status_code=status.HTTP_400_BAD_REQUEST)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={ "message": "Todoist Authentication Failed." })
         
     query_user = users_todoist_credentials.select().where(users_todoist_credentials.c.secret_string == state)
     user_todoist_data = await database.fetch_one(query_user)
@@ -57,9 +57,26 @@ async def redirect(code: str, state: str):
     return JSONResponse(content={ "message": "Todoist Authentication Complete." }, status_code=status.HTTP_200_OK)
 
 @todoist_router.get("/todoist-tasks")
-def get_tasks():
-    return JSONResponse(status_code=200, content=todoist.get_todoist_tasks())
+def get_tasks(current_user: UserAuth = Depends(get_current_user)):
+    return JSONResponse(status_code=status.HTTP_200_OK, content=todoist.get_todoist_tasks())
 
 @todoist_router.get("/todoist-task/{id}")
-def get_tasks(id: str):
-    return JSONResponse(status_code=200, content=todoist.get_todoist_task(task_id=id))
+def get_tasks(id: str, current_user: UserAuth = Depends(get_current_user)):
+    return JSONResponse(status_code=status.HTTP_200_OK, content=todoist.get_todoist_task(task_id=id))
+
+@todoist_router.delete("/deactivate-integration")
+async def deactivate_integration(current_user: UserAuth = Depends(get_current_user)):
+    query_user = users_todoist_credentials.select().where(users_todoist_credentials.c.user_id == current_user.id)
+    user_todoist_data = await database.fetch_one(query_user)
+    
+    if user_todoist_data is None:
+        return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content={ "message": "User not found." })
+    
+    try:
+        query_delete = users_todoist_credentials.delete().where(users_todoist_credentials.c.user_id == current_user.id)
+        await database.execute(query_delete)
+        
+        return JSONResponse(status_code=status.HTTP_200_OK, content={ "message": "Integration deactivated successfully." })
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_201_CREATED, detail={ "message": "Internal Server Error.", "detail": str(e) })
+    

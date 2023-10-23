@@ -9,6 +9,7 @@ contracts = Table(
     "contracts",
     get_metadata(),
     Column("id", Integer, primary_key=True),
+    Column("user_id", String(255), nullable=False),
     Column("task_id", String(255), nullable=False),
     Column("responsible_name", String(255), nullable=False),
     Column("responsible_email", String(255), nullable=False),

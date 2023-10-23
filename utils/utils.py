@@ -4,6 +4,12 @@ from typing import Union, Any
 from jose import jwt
 from passlib.context import CryptContext
 from dotenv import load_dotenv
+from uuid import uuid4
+
+from config.db import database
+
+from models.contract import contracts
+from models.user import users
 
 load_dotenv()
 
@@ -40,3 +46,24 @@ def create_refresh_token(subject: Union[str, Any], expires_delta: int = None) ->
     to_encode = {"exp": expires_delta, "sub": str(subject)}
     encode_jwt = jwt.encode(to_encode, JWT_REFRESH_SECRET_KEY, algorithm=ALGORITHM)
     return encode_jwt
+
+async def validate_contracts(contract_id, user_id) -> bool:
+    query = contracts.select().where(
+        (contracts.c.id == contract_id) & 
+        (contracts.c.user_id == user_id)
+    )
+    
+    if await database.fetch_one(query) is None:
+        return False
+    else:
+        return True
+    
+async def user_id_is_used() -> str:
+    new_user_id = str(uuid4())
+    query_verify_user_id = users.select().where(users.c.id == new_user_id)
+    response_verify = await database.fetch_one(query_verify_user_id)
+    
+    if response_verify is not None:
+        await user_id_is_used()
+    else:
+        return new_user_id

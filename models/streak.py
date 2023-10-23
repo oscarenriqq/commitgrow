@@ -9,6 +9,7 @@ streaks = Table(
     "streaks",
     get_metadata(),
     Column("id", Integer, primary_key=True),
+    Column("user_id", String(255), nullable=False),
     Column("contract_id", Integer, nullable=False),
     Column("created_at", DateTime, nullable=False, default=func.now()),
     Column("updated_at", DateTime, nullable=False, default=func.now()),
