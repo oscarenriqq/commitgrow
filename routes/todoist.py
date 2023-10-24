@@ -57,6 +57,19 @@ async def redirect(code: str, state: str):
 
     return JSONResponse(content={ "message": "Todoist Authentication Complete." }, status_code=status.HTTP_200_OK)
 
+@todoist_router.get("/verify-integration")
+async def verify_integration(current_user: UserAuth = Depends(get_current_user)):
+    query_user = users_todoist_credentials.select().where(users_todoist_credentials.c.user_id == current_user.id)
+    user_todoist_data = await database.fetch_one(query_user)
+    
+    if user_todoist_data is None:
+        return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content={ "message": "User not found." })
+    
+    if user_todoist_data.access_token == "":
+        return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content={ "message": "Integration not activated." })
+    
+    return JSONResponse(status_code=status.HTTP_200_OK, content={ "message": "Integration activated." })
+
 @todoist_router.get("/todoist-tasks")
 def get_tasks(current_user: UserAuth = Depends(get_current_user)):
     return JSONResponse(status_code=status.HTTP_200_OK, content=todoist.get_todoist_tasks())
