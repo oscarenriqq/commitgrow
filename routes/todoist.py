@@ -1,7 +1,9 @@
 import requests
 import os
-from fastapi import APIRouter, status, Depends, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, status, Depends, HTTPException, Request
+from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from dotenv import load_dotenv
 
 from utils import todoist
@@ -13,6 +15,9 @@ from config.db import database
 from app.deps import get_current_user
 
 todoist_router = APIRouter(tags=["Todoist Integration"], prefix="/api/todoist")
+
+todoist_router.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
 
 load_dotenv()
 
@@ -57,7 +62,11 @@ async def redirect(code: str, state: str):
     query = users_todoist_credentials.update().where(users_todoist_credentials.c.user_id == user_todoist_data.user_id).values(access_token=str(todoist_auth_data['access_token']))
     await database.execute(query)
 
-    return JSONResponse(content={ "message": "Todoist Authentication Complete." }, status_code=status.HTTP_200_OK)
+    return RedirectResponse(url="{}/confirm".format(os.getenv("URL_FRONTEND")))
+
+@todoist_router.get("/confirm-integration")
+async def confirm_integration(request: Request):
+    return templates.TemplateResponse("confirm.html", {"request": request})
 
 @todoist_router.get("/verify-integration")
 async def verify_integration(current_user: UserAuth = Depends(get_current_user)):
