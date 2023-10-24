@@ -16,9 +16,6 @@ from app.deps import get_current_user
 
 todoist_router = APIRouter(tags=["Todoist Integration"], prefix="/api/todoist")
 
-todoist_router.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
-
 load_dotenv()
 
 @todoist_router.post("/authorize")
