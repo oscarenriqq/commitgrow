@@ -13,7 +13,7 @@ from models.user import users
 from schemas.user_auth import UserAuth
 
 reuseable_oauth = OAuth2PasswordBearer(
-    tokenUrl="/login",
+    tokenUrl="/api/auth/login",
     scheme_name="JWT"
 )
 
