@@ -22,14 +22,13 @@ async def authorize(todoist: Todoist, current_user: UserAuth = Depends(get_curre
     query = users_todoist_credentials.select().where(users_todoist_credentials.c.user_id == current_user.id)
     result = await database.fetch_one(query)
     
-    if result["access_token"] != "":
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={ "message": "Integration already activated." })
-    
     if result is None:
         users_todoist_credentials_data = { "user_id": current_user.id, "secret_string": todoist.secret_string, "access_token": "" }
         query_insert = users_todoist_credentials.insert().values(users_todoist_credentials_data)
         await database.execute(query_insert)
     else:
+        if result["access_token"] != "":
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={ "message": "Integration already activated." })
         query_update = users_todoist_credentials.update().where(users_todoist_credentials.c.user_id == current_user.id).values(secret_string=todoist.secret_string)
         await database.execute(query_update)
             
