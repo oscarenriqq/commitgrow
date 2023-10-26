@@ -59,7 +59,7 @@ async def redirect(code: str, state: str):
     query = users_todoist_credentials.update().where(users_todoist_credentials.c.user_id == user_todoist_data.user_id).values(access_token=str(todoist_auth_data['access_token']))
     await database.execute(query)
 
-    return RedirectResponse(url="{}".format(os.getenv("URL_FRONTEND")))
+    return RedirectResponse(url="{}/profile".format(os.getenv("URL_FRONTEND")))
 
 @todoist_router.get("/verify-integration")
 async def verify_integration(current_user: UserAuth = Depends(get_current_user)):
