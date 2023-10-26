@@ -75,27 +75,27 @@ async def verify_integration(current_user: UserAuth = Depends(get_current_user))
     return JSONResponse(status_code=status.HTTP_200_OK, content={ "message": "Integration activated." })
 
 @todoist_router.get("/todoist-tasks")
-def get_tasks(current_user: UserAuth = Depends(get_current_user)):
+async def get_tasks(current_user: UserAuth = Depends(get_current_user)):
     
     query = users_todoist_credentials.select().where(users_todoist_credentials.c.user_id == current_user.id)
-    result = database.fetch_one(query)
+    result = await database.fetch_one(query)
     
     if result is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={ "message": "Integration not activated." })
     
-    todoist_token = result['access_token']
+    todoist_token = result.access_token
     
     return JSONResponse(status_code=status.HTTP_200_OK, content=todoist.get_todoist_tasks(todoist_token=todoist_token))
 
 @todoist_router.get("/todoist-task/{id}")
-def get_tasks(id: str, current_user: UserAuth = Depends(get_current_user)):    
+async def get_tasks(id: str, current_user: UserAuth = Depends(get_current_user)):    
     query = users_todoist_credentials.select().where(users_todoist_credentials.c.user_id == current_user.id)
-    result = database.fetch_one(query)
+    result = await database.fetch_one(query)
     
     if result is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={ "message": "Integration not activated." })
     
-    todoist_token = result['access_token']
+    todoist_token = result.access_token
     return JSONResponse(status_code=status.HTTP_200_OK, content=todoist.get_todoist_task(todoist_token=todoist_token, task_id=id))
 
 @todoist_router.delete("/deactivate-integration")
