@@ -1,9 +1,10 @@
 import os
 from todoist_api_python.api import TodoistAPI
 
-todoist_conn = TodoistAPI(os.getenv("TODOIST_ACCESS_TOKEN"))
-
-def get_todoist_tasks(label='commit-grow'):
+def get_todoist_tasks(todoist_token, label='commit-grow'):
+    
+    todoist_conn = TodoistAPI(todoist_token)
+    
     response = []
     tasks = todoist_conn.get_tasks(label=label)
     for task in tasks:
@@ -14,7 +15,10 @@ def get_todoist_tasks(label='commit-grow'):
         })
     return response
 
-def get_todoist_task(task_id: str):
+def get_todoist_task(todoist_token, task_id: str):
+    
+    todoist_conn = TodoistAPI(todoist_token)
+    
     task = todoist_conn.get_task(task_id=task_id)
     return {
         "task_id": task.id,
