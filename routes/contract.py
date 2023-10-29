@@ -59,7 +59,6 @@ async def create_contract(contract: Contract, current_user: UserAuth = Depends(g
             responsible_name=user.name,
             responsible_email=user.email,
             habit=contract.habit,
-            description=contract.description,
             penalty=contract.penalty,
             start=contract.start.strftime("%Y-%m-%d"),
             end=contract.end.strftime("%Y-%m-%d"),
