@@ -14,7 +14,6 @@ contracts = Table(
     Column("responsible_name", String(255), nullable=False),
     Column("responsible_email", String(255), nullable=False),
     Column("habit", String(255), nullable=False),
-    Column("description", TEXT, nullable=False),
     Column("penalty", TEXT, nullable=False),
     Column("start", Date, nullable=False),
     Column("end", Date, nullable=False),
