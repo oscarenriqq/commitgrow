@@ -1,5 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
+import json
 
 from config.db import database
 from models.contract import contracts
@@ -24,7 +26,8 @@ contract_router = APIRouter(
 async def get_contracts(current_user: UserAuth = Depends(get_current_user)):
     query = contracts.select().where(contracts.c.user_id == current_user.id)
     result = await database.fetch_all(query)
-    return JSONResponse(status_code=status.HTTP_200_OK, content=result)
+    
+    return JSONResponse(status_code=status.HTTP_200_OK, content=jsonable_encoder(result))
 
 @contract_router.get("/active-contracts", response_model=list[Contract])
 async def get_contracts(current_user: UserAuth = Depends(get_current_user)):
@@ -34,7 +37,7 @@ async def get_contracts(current_user: UserAuth = Depends(get_current_user)):
     )
     try:
         result = await database.fetch_all(query)
-        return JSONResponse(status_code=status.HTTP_200_OK, content=result)
+        return JSONResponse(status_code=status.HTTP_200_OK, content=jsonable_encoder(result))
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
