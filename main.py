@@ -12,7 +12,8 @@ from config.db import database
 app = FastAPI(swagger_ui_parameters={"syntaxHighlight.theme": "obsidian"})
 
 origins = [
-    "*",
+    "http://localhost",
+    "http://localhost:5173",
 ]
 
 app.add_middleware(
