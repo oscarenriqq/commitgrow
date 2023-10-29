@@ -4,7 +4,6 @@ from datetime import date
 
 class Contract(BaseModel):
     id: Optional[int] = None
-    user_id: str
     task_id: str
     habit: str
     description: str
