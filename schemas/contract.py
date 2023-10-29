@@ -6,7 +6,6 @@ class Contract(BaseModel):
     id: Optional[int] = None
     task_id: str
     habit: str
-    description: str
     penalty: str
     start: date
     end: date
