@@ -17,7 +17,7 @@ PROTECTED = [Depends(get_current_user)]
 contract_router = APIRouter(
     tags=["Contracts"],
     dependencies=PROTECTED,
-    prefix="/api"
+    prefix="/api",
 )
 
 @contract_router.get("/contracts", response_model=list[Contract])
