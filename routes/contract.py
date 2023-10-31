@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
-import json
+import pendulum
 
 from config.db import database
 from models.contract import contracts
@@ -56,6 +56,10 @@ async def create_contract(contract: Contract, current_user: UserAuth = Depends(g
             detail={"message": "User not found"}
         )
     try:
+        
+        date_start = pendulum.from_format(contract.start, "YYYY-MM-DD", tz="America/Panama")
+        date_end = pendulum.from_format(contract.end, "YYYY-MM-DD", tz="America/Panama")
+        
         query = contracts.insert().values(
             user_id=current_user.id,
             task_id=contract.task_id,
@@ -63,9 +67,9 @@ async def create_contract(contract: Contract, current_user: UserAuth = Depends(g
             responsible_email=user.email,
             habit=contract.habit,
             penalty=contract.penalty,
-            start=contract.start.strftime("%Y-%m-%d"),
-            end=contract.end.strftime("%Y-%m-%d"),
-            status=0,
+            start=date_start,
+            end=date_end,
+            status=1,
             supervisor_name=contract.supervisor_name,
             supervisor_email=contract.supervisor_email
         )
