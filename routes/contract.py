@@ -57,8 +57,8 @@ async def create_contract(contract: Contract, current_user: UserAuth = Depends(g
         )
     try:
         
-        date_start = pendulum.from_format(contract.start, "YYYY-MM-DD", tz="America/Panama")
-        date_end = pendulum.from_format(contract.end, "YYYY-MM-DD", tz="America/Panama")
+        date_start = pendulum.from_format(str(contract.start), "YYYY-MM-DD", tz="America/Panama")
+        date_end = pendulum.from_format(str(contract.end), "YYYY-MM-DD", tz="America/Panama")
         
         query = contracts.insert().values(
             user_id=current_user.id,
@@ -77,6 +77,7 @@ async def create_contract(contract: Contract, current_user: UserAuth = Depends(g
         last_record_id = await database.execute(query)
         return JSONResponse(status_code=status.HTTP_201_CREATED, content={"message": "Contract created successfully", "id": last_record_id})
     except Exception as e:
+        print(e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={"message": "Internal Server Error", "detail": str(e)}
