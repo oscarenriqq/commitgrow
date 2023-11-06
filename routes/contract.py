@@ -29,6 +29,34 @@ async def get_contracts(current_user: UserAuth = Depends(get_current_user)):
     
     return JSONResponse(status_code=status.HTTP_200_OK, content=jsonable_encoder(result))
 
+@contract_router.get("/contract/{id}", response_model=Contract)
+async def get_contracts(id: str, current_user: UserAuth = Depends(get_current_user)):
+    query = contracts.select().where((contracts.c.id == id) & (contracts.c.user_id == current_user.id))
+    result = await database.fetch_one(query)
+    
+    user_streaks = await database.fetch_all(streaks.select().where((streaks.c.contract_id == id) & (streaks.c.user_id == current_user.id)))
+    user_penalties = await database.fetch_all(penalties.select().where((penalties.c.contract_id == id) & (penalties.c.user_id == current_user.id)))
+    
+    result_dict = dict(result)
+    
+    result_dict["streaks"] = jsonable_encoder(user_streaks)
+    result_dict["penalties"] = jsonable_encoder(user_penalties)
+    
+    days_passed = pendulum.now("America/Bogota").diff(pendulum.from_format(str(result_dict["start"]), "YYYY-MM-DD", tz="America/Bogota")).in_days()
+    
+    result_dict["days_passed"] = days_passed if days_passed > 0 else 1
+    
+    #calculate total days and days left
+    date_start = pendulum.from_format(str(result_dict["start"]), "YYYY-MM-DD", tz="America/Bogota")
+    date_end = pendulum.from_format(str(result_dict["end"]), "YYYY-MM-DD", tz="America/Bogota")
+    
+    total_days = date_start.diff(date_end).in_days() if date_start.diff(date_end).in_days() > 0 else 0
+    
+    result_dict["total_days"] = total_days if total_days > 0 else 1
+    result_dict["days_left"] = date_end.diff(pendulum.now("America/Bogota")).in_days()
+    
+    return JSONResponse(status_code=status.HTTP_200_OK, content=jsonable_encoder(result_dict))
+
 @contract_router.get("/active-contracts", response_model=list[Contract])
 async def get_contracts(current_user: UserAuth = Depends(get_current_user)):
     query = contracts.select().where(
@@ -55,10 +83,20 @@ async def create_contract(contract: Contract, current_user: UserAuth = Depends(g
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"message": "User not found"}
         )
+        
+    #verify if the user has more than 3 active contracts
+    query = contracts.select().where(contracts.c.user_id == current_user.id)
+    result = await database.fetch_all(query)
+    if len(result) >= 3:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"message": "You can't create more than 3 contracts"}
+        )
+        
     try:
         
-        date_start = pendulum.from_format(str(contract.start), "YYYY-MM-DD", tz="America/Panama")
-        date_end = pendulum.from_format(str(contract.end), "YYYY-MM-DD", tz="America/Panama")
+        date_start = pendulum.from_format(str(contract.start), "YYYY-MM-DD", tz="America/Bogota")
+        date_end = pendulum.from_format(str(contract.end), "YYYY-MM-DD", tz="America/Bogota")
         
         query = contracts.insert().values(
             user_id=current_user.id,
@@ -70,6 +108,7 @@ async def create_contract(contract: Contract, current_user: UserAuth = Depends(g
             start=date_start,
             end=date_end,
             status=1,
+            is_completed=0,
             supervisor_name=contract.supervisor_name,
             supervisor_email=contract.supervisor_email
         )

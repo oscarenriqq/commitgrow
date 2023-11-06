@@ -19,7 +19,8 @@ contracts = Table(
     Column("end", Date, nullable=False),
     Column("supervisor_name", String(255), nullable=False),
     Column("supervisor_email", String(255), nullable=False),
-    Column("status", Integer, nullable=False, default=0),
+    Column("status", Integer, nullable=False, default=1),
+    Column("is_completed", Integer, nullable=False, default=0),
     Column("created_at", DateTime, nullable=False, default=func.now()),
     Column("updated_at", DateTime, nullable=False, default=func.now()),
 )
