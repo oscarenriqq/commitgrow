@@ -122,7 +122,7 @@ async def create_contract(contract: Contract, current_user: UserAuth = Depends(g
         
         now = pendulum.now()
         
-        status = 1 if now >= date_start else 0
+        status_contract = 1 if now >= date_start else 0
         
         query = contracts.insert().values(
             user_id=current_user.id,
@@ -133,7 +133,7 @@ async def create_contract(contract: Contract, current_user: UserAuth = Depends(g
             penalty=contract.penalty,
             start=date_start,
             end=date_end,
-            status=status,
+            status=status_contract,
             supervisor_name=contract.supervisor_name,
             supervisor_email=contract.supervisor_email
         )

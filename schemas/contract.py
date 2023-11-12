@@ -14,6 +14,5 @@ class Contract(BaseModel):
     supervisor_name: str
     supervisor_email: str
     status: Optional[int] = 0
-    is_completed: Optional[int] = 0
     streaks: Optional[Streak] = None
     penalties: Optional[Penalty] = None
