@@ -12,9 +12,7 @@ from config.db import database
 app = FastAPI(swagger_ui_parameters={"syntaxHighlight.theme": "obsidian"})
 
 origins = [
-    "http://localhost",
-    "http://localhost:5173",
-    "http://localhost:5173/profile"
+    "http://localhost:5173"
 ]
 
 app.add_middleware(
@@ -27,10 +25,10 @@ app.add_middleware(
 
 load_dotenv() 
 
-app.include_router(user_router)
 app.include_router(auth_router)
 app.include_router(contract_router)
 app.include_router(todoist_router)
+app.include_router(user_router)
 
 @app.on_event("startup")
 async def startup():

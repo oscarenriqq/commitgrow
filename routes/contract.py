@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 import pendulum
+from datetime import datetime
 
 from config.db import database
 from models.contract import contracts
@@ -27,7 +28,19 @@ async def get_contracts(current_user: UserAuth = Depends(get_current_user)):
     query = contracts.select().where(contracts.c.user_id == current_user.id)
     result = await database.fetch_all(query)
     
-    return JSONResponse(status_code=status.HTTP_200_OK, content=jsonable_encoder(result))
+    current_date = datetime.now()
+    
+    response_contracts = []
+    
+    for contract in result:
+        start_date = contract['start']  # Obtiene la fecha de inicio del contrato
+
+        #Verificamos si ya inició el contrato
+        response_contract = dict(contract)
+        response_contract['started'] = start_date < current_date.date()
+        response_contracts.append(response_contract)
+    
+    return JSONResponse(status_code=status.HTTP_200_OK, content=jsonable_encoder(response_contracts))
 
 @contract_router.get("/contract/{id}", response_model=Contract)
 async def get_contracts(id: str, current_user: UserAuth = Depends(get_current_user)):

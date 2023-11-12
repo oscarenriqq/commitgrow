@@ -85,7 +85,12 @@ async def get_tasks(current_user: UserAuth = Depends(get_current_user)):
     
     todoist_token = result.access_token
     
-    return JSONResponse(status_code=status.HTTP_200_OK, content=todoist.get_todoist_tasks(todoist_token=todoist_token))
+    try:
+        tasks = todoist.get_todoist_tasks(todoist_token=todoist_token)
+        
+        return JSONResponse(status_code=status.HTTP_200_OK, content=tasks)
+    except requests.exceptions.HTTPError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={ "message": "Todoist Authentication Failed." })
 
 @todoist_router.get("/task/{id}")
 async def get_tasks(id: str, current_user: UserAuth = Depends(get_current_user)):    
@@ -96,7 +101,13 @@ async def get_tasks(id: str, current_user: UserAuth = Depends(get_current_user))
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={ "message": "Integration not activated." })
     
     todoist_token = result.access_token
-    return JSONResponse(status_code=status.HTTP_200_OK, content=todoist.get_todoist_task(todoist_token=todoist_token, task_id=id))
+    
+    try: 
+        task = todoist.get_todoist_task(todoist_token=todoist_token, task_id=id)
+        
+        return JSONResponse(status_code=status.HTTP_200_OK, content=task)
+    except requests.exceptions.HTTPError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={ "message": "Todoist Authentication Failed." })
 
 @todoist_router.delete("/deactivate-integration")
 async def deactivate_integration(current_user: UserAuth = Depends(get_current_user)):
