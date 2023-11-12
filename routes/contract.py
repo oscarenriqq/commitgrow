@@ -58,25 +58,25 @@ async def get_contracts(id: str, current_user: UserAuth = Depends(get_current_us
     result_dict["streaks"] = jsonable_encoder(user_streaks)
     result_dict["penalties"] = jsonable_encoder(user_penalties)
     
-    days_passed = now.diff(pendulum.from_format(str(result_dict["start"]), "YYYY-MM-DD", tz="America/Bogota")).in_days()
-    
-    result_dict["days_passed"] = days_passed if days_passed > 0 else 1
-    
     #calculate total days and days left
     date_start = pendulum.from_format(str(result_dict["start"]), "YYYY-MM-DD", tz="America/Bogota")
     date_end = pendulum.from_format(str(result_dict["end"]), "YYYY-MM-DD", tz="America/Bogota")
     
     total_days = date_start.diff(date_end).in_days() if date_start.diff(date_end).in_days() > 0 else 0
-    
-    print(total_days)
-    
     result_dict["total_days"] = total_days if total_days > 0 else 1
     
+    # Verificar si el contrato ya inició
+    # Dependiendo de la fecha de inicio y la fecha actual, el calculo de los días restantes cambia
     if date_start > now:
         result_dict["days_left"] = date_end.diff(date_start).in_days()
+        #calculando días pasados
+        result_dict["days_passed"] = 0
     else:
         result_dict["days_left"] = date_end.diff(now).in_days()
-    
+        #calculando días pasados
+        days_passed = now.diff(date_start).in_days()
+        result_dict["days_passed"] = days_passed
+        
     return JSONResponse(status_code=status.HTTP_200_OK, content=jsonable_encoder(result_dict))
 
 @contract_router.get("/active-contracts", response_model=list[Contract])
@@ -120,6 +120,10 @@ async def create_contract(contract: Contract, current_user: UserAuth = Depends(g
         date_start = pendulum.from_format(str(contract.start), "YYYY-MM-DD", tz="America/Bogota")
         date_end = pendulum.from_format(str(contract.end), "YYYY-MM-DD", tz="America/Bogota")
         
+        now = pendulum.now()
+        
+        status = 1 if now >= date_start else 0
+        
         query = contracts.insert().values(
             user_id=current_user.id,
             task_id=contract.task_id,
@@ -129,8 +133,7 @@ async def create_contract(contract: Contract, current_user: UserAuth = Depends(g
             penalty=contract.penalty,
             start=date_start,
             end=date_end,
-            status=1,
-            is_completed=0,
+            status=status,
             supervisor_name=contract.supervisor_name,
             supervisor_email=contract.supervisor_email
         )
