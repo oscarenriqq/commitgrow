@@ -44,6 +44,9 @@ async def get_contracts(current_user: UserAuth = Depends(get_current_user)):
 
 @contract_router.get("/contract/{id}", response_model=Contract)
 async def get_contracts(id: str, current_user: UserAuth = Depends(get_current_user)):
+    
+    now = pendulum.now("America/Bogota")
+    
     query = contracts.select().where((contracts.c.id == id) & (contracts.c.user_id == current_user.id))
     result = await database.fetch_one(query)
     
@@ -55,7 +58,7 @@ async def get_contracts(id: str, current_user: UserAuth = Depends(get_current_us
     result_dict["streaks"] = jsonable_encoder(user_streaks)
     result_dict["penalties"] = jsonable_encoder(user_penalties)
     
-    days_passed = pendulum.now("America/Bogota").diff(pendulum.from_format(str(result_dict["start"]), "YYYY-MM-DD", tz="America/Bogota")).in_days()
+    days_passed = now.diff(pendulum.from_format(str(result_dict["start"]), "YYYY-MM-DD", tz="America/Bogota")).in_days()
     
     result_dict["days_passed"] = days_passed if days_passed > 0 else 1
     
@@ -65,8 +68,14 @@ async def get_contracts(id: str, current_user: UserAuth = Depends(get_current_us
     
     total_days = date_start.diff(date_end).in_days() if date_start.diff(date_end).in_days() > 0 else 0
     
+    print(total_days)
+    
     result_dict["total_days"] = total_days if total_days > 0 else 1
-    result_dict["days_left"] = date_end.diff(pendulum.now("America/Bogota")).in_days()
+    
+    if date_start > now:
+        result_dict["days_left"] = date_end.diff(date_start).in_days()
+    else:
+        result_dict["days_left"] = date_end.diff(now).in_days()
     
     return JSONResponse(status_code=status.HTTP_200_OK, content=jsonable_encoder(result_dict))
 
