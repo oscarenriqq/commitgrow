@@ -37,7 +37,7 @@ async def get_contracts(current_user: UserAuth = Depends(get_current_user)):
 
         #Verificamos si ya inició el contrato
         response_contract = dict(contract)
-        response_contract['started'] = start_date < current_date.date()
+        response_contract['started'] = start_date <= current_date.date()
         response_contracts.append(response_contract)
     
     return JSONResponse(status_code=status.HTTP_200_OK, content=jsonable_encoder(response_contracts))
