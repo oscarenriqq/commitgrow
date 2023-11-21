@@ -1,7 +1,7 @@
 import os
 from todoist_api_python.api import TodoistAPI
 
-def get_todoist_tasks(todoist_token, label='commit-grow'):
+def get_todoist_tasks(todoist_token, label='commitgrow'):
     
     todoist_conn = TodoistAPI(todoist_token)
     

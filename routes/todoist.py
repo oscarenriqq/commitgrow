@@ -66,8 +66,6 @@ async def verify_integration(current_user: UserAuth = Depends(get_current_user))
     query_user = users_todoist_credentials.select().where(users_todoist_credentials.c.user_id == current_user.id)
     user_todoist_data = await database.fetch_one(query_user)
     
-    print(user_todoist_data)
-    
     if user_todoist_data is None:
         return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content={ "message": "User not found." })
     
