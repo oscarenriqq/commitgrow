@@ -10,6 +10,7 @@ users = Table(
     Column("name", String(255), nullable=False),
     Column("email", String(255), nullable=False, unique=True),
     Column("password", String(255), nullable=False),
+    Column("role", String(255), nullable=False, default="user"),
     Column("created_at", DateTime, nullable=False, default=func.now()),
     Column("updated_at", DateTime, nullable=False, default=func.now()),
 )

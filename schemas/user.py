@@ -1,5 +1,10 @@
+from enum import Enum
 from typing import Optional
 from pydantic import BaseModel
+
+class UserRole(str, Enum):
+    admin = "admin"
+    user = "user"
 
 class User(BaseModel):
     id: Optional[int] = 0

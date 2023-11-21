@@ -3,5 +3,5 @@
         "editor.defaultFormatter": "ms-python.autopep8"
     },
     "python.formatting.provider": "none",
-    "workbench.colorTheme": "Darcula Theme from IntelliJ"
+    "workbench.colorTheme": "One Dark Pro"
 }

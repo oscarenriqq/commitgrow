@@ -8,6 +8,7 @@ from starlette.responses import JSONResponse
 from config.db import database
 from models.user import users
 from schemas.user_auth import UserAuth
+from schemas.user import UserRole
 
 from utils.utils import (
     get_hashed_password,
@@ -43,7 +44,9 @@ async def create_user(data: UserAuth):
         "id": new_user_id,
         "name": data.name,
         "email": data.email,
+        "role": UserRole.user,
         "password": get_hashed_password(data.password),
+        
     }
     
     query_insert = users.insert().values(user)
